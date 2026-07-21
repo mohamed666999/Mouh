@@ -16,24 +16,10 @@ async def trade(request: Request):
     try:
         data = await request.json()
         symbol = data.get("symbol", "DOGEUSDT")
-        side = data.get("side", "Buy") # Buy تعني Long، و Sell تعني Short
-        amount_usdt = float(data.get("amount_usdt", 3))
+        side = data.get("side", "Buy")
+        qty = data.get("qty", "40") # استلام الكمية مباشرة من Make
 
-        # 1. جلب السعر الحالي من سوق العقود الآجلة (Linear Futures)
-        ticker_url = f"{BASE_URL}/v5/market/tickers?category=linear&symbol={symbol}"
-        ticker_response = requests.get(ticker_url)
-        
-        if ticker_response.status_code != 200:
-            return {"error": "فشل في جلب السعر", "details": ticker_response.text}
-            
-        ticker_data = ticker_response.json()
-        last_price = float(ticker_data["result"]["list"][0]["lastPrice"])
-        
-        # 2. حساب عدد العقود بناءً على المبلغ والرافعة
-        qty = amount_usdt / last_price
-        qty_str = str(round(qty, 1))
-
-        # 3. تجهيز بيانات الطلب للعقود الآجلة (linear)
+        # تجهيز بيانات الطلب للعقود الآجلة (linear) وإرسالها لـ Bybit
         endpoint = "/v5/order/create"
         timestamp = str(int(time.time() * 1000))
         recv_window = "5000"
@@ -43,14 +29,14 @@ async def trade(request: Request):
             "symbol": symbol,
             "side": side.capitalize(),
             "orderType": "Market",
-            "qty": qty_str,
-            "positionIdx": 0 # وضع التداول الموحد أو الاتجاه الواحد
+            "qty": str(qty),
+            "positionIdx": 0
         }
         
         payload_str = json.dumps(payload)
         param_str = timestamp + API_KEY + recv_window + payload_str
         
-        # إنشاء التوقيع الأمني HMAC-SHA256
+        # إنشاء التوقيع الأمني
         hash_mac = hmac.new(bytes(API_SECRET, "utf-8"), param_str.encode("utf-8"), hashlib.sha256)
         signature = hash_mac.hexdigest()
         
@@ -66,9 +52,8 @@ async def trade(request: Request):
         order_response = requests.post(order_url, headers=headers, data=payload_str)
         
         return {
-            "message": "تم إرسال أمر الرافعة المالية بنجاح",
-            "price_used": last_price,
-            "qty_calculated": qty_str,
+            "message": "تم إرسال أمر الصفقة بنجاح",
+            "qty_used": qty,
             "bybit_response": order_response.json()
         }
         
