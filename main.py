@@ -274,13 +274,28 @@ async def trade(request: Request):
         order_value = qty * current_price
 
 
+        # ==========================================
+        # إصلاح الحد الأدنى 5 USDT
+        # ==========================================
+
+        if order_value < Decimal("5"):
+
+            qty = (
+
+                qty + qty_step
+
+            )
+
+            order_value = qty * current_price
+
+
         if order_value < Decimal("5"):
 
             return {
 
                 "success": False,
 
-                "error": "قيمة الصفقة أقل من الحد الأدنى 5 USDT",
+                "error": "تعذر الوصول إلى الحد الأدنى 5 USDT",
 
                 "symbol": symbol,
 
