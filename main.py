@@ -89,14 +89,10 @@ async def trade(request: Request):
 
     try:
 
-        # ==========================================
-        # 1. قراءة بيانات Make
-        # ==========================================
-
         data = await request.json()
 
         action = str(
-            data.get("action", "BUY")
+            data.get("action", "LONG")
         ).upper()
 
         symbol = str(
@@ -108,11 +104,11 @@ async def trade(request: Request):
         )
 
 
-        if action not in ["BUY", "SELL"]:
+        if action not in ["LONG", "SHORT"]:
 
             return {
                 "success": False,
-                "error": "action يجب أن يكون BUY أو SELL"
+                "error": "action يجب أن يكون LONG أو SHORT"
             }
 
 
@@ -123,10 +119,6 @@ async def trade(request: Request):
                 "error": "amount_usdt يجب أن يكون أكبر من صفر"
             }
 
-
-        # ==========================================
-        # 2. جلب السعر الحالي
-        # ==========================================
 
         ticker_response = requests.get(
 
@@ -181,10 +173,6 @@ async def trade(request: Request):
 
         )
 
-
-        # ==========================================
-        # 3. جلب قواعد العملة
-        # ==========================================
 
         instrument_response = requests.get(
 
@@ -256,10 +244,6 @@ async def trade(request: Request):
         )
 
 
-        # ==========================================
-        # 4. حساب الكمية
-        # ==========================================
-
         raw_qty = amount_usdt / current_price
 
 
@@ -309,15 +293,11 @@ async def trade(request: Request):
             }
 
 
-        # ==========================================
-        # 5. إنشاء أمر التداول
-        # ==========================================
-
         side = (
 
             "Buy"
 
-            if action == "BUY"
+            if action == "LONG"
 
             else "Sell"
 
@@ -390,10 +370,6 @@ async def trade(request: Request):
         )
 
 
-        # ==========================================
-        # 6. إرسال الأمر إلى Bybit
-        # ==========================================
-
         response = requests.post(
 
             ORDER_URL,
@@ -436,16 +412,8 @@ async def trade(request: Request):
         )
 
 
-        # ==========================================
-        # 7. انتظار قصير حتى يتم تحديث حالة الأمر
-        # ==========================================
-
         time.sleep(1)
 
-
-        # ==========================================
-        # 8. جلب حالة الأمر
-        # ==========================================
 
         order_status_data = signed_get(
 
@@ -487,10 +455,6 @@ async def trade(request: Request):
             )
 
 
-        # ==========================================
-        # 9. جلب المركز الحالي
-        # ==========================================
-
         position_data = signed_get(
 
             POSITION_URL,
@@ -531,10 +495,6 @@ async def trade(request: Request):
 
         ]
 
-
-        # ==========================================
-        # 10. النتيجة النهائية
-        # ==========================================
 
         return {
 
